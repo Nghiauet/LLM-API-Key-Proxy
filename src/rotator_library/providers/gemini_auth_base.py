@@ -13,8 +13,8 @@ import httpx
 
 lib_logger = logging.getLogger('rotator_library')
 
-CLIENT_ID = "REPLACE_WITH_GEMINI_CLI_OAUTH_CLIENT_ID"
-CLIENT_SECRET = "REPLACE_WITH_GEMINI_CLI_OAUTH_CLIENT_SECRET"
+CLIENT_ID = "REPLACE_WITH_GEMINI_CLI_OAUTH_CLIENT_ID" ##https://api.kilocode.ai/extension-config.json
+CLIENT_SECRET = "REPLACE_WITH_GEMINI_CLI_OAUTH_CLIENT_SECRET" ##https://api.kilocode.ai/extension-config.json
 TOKEN_URI = "https://oauth2.googleapis.com/token"
 REFRESH_EXPIRY_BUFFER_SECONDS = 300
 
