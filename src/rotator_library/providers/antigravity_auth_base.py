@@ -23,7 +23,7 @@ lib_logger = logging.getLogger('rotator_library')
 
 # Antigravity OAuth credentials from CLIProxyAPI
 CLIENT_ID = "REPLACE_WITH_ANTIGRAVITY_OAUTH_CLIENT_ID"
-CLIENT_SECRET = "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"
+CLIENT_SECRET = "REPLACE_WITH_ANTIGRAVITY_OAUTH_CLIENT_SECRET"
 TOKEN_URI = "https://oauth2.googleapis.com/token"
 USER_INFO_URI = "https://www.googleapis.com/oauth2/v1/userinfo"
 REFRESH_EXPIRY_BUFFER_SECONDS = 30 * 60  # 30 minutes buffer before expiry
