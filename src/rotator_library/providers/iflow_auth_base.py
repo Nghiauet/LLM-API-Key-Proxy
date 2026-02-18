@@ -39,9 +39,12 @@ IFLOW_USER_INFO_ENDPOINT = "https://iflow.cn/api/oauth/getUserInfo"
 IFLOW_SUCCESS_REDIRECT_URL = "https://iflow.cn/oauth/success"
 IFLOW_ERROR_REDIRECT_URL = "https://iflow.cn/oauth/error"
 
-# Client credentials provided by iFlow
-IFLOW_CLIENT_ID = "10009311001"
-IFLOW_CLIENT_SECRET = "REPLACE_WITH_IFLOW_CLIENT_SECRET"
+# Client credentials can be supplied via environment variables.
+IFLOW_CLIENT_ID = os.getenv("IFLOW_CLIENT_ID", "REPLACE_WITH_IFLOW_CLIENT_ID")
+IFLOW_CLIENT_SECRET = os.getenv(
+    "IFLOW_CLIENT_SECRET",
+    "REPLACE_WITH_IFLOW_CLIENT_SECRET",
+)
 
 # Local callback server port
 CALLBACK_PORT = 11451

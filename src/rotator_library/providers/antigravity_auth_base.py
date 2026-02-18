@@ -39,10 +39,14 @@ class AntigravityAuthBase(GoogleOAuthBase):
     ensuring credentials have their tier and project_id cached before any API requests.
     """
 
-    CLIENT_ID = (
-        "REPLACE_WITH_ANTIGRAVITY_OAUTH_CLIENT_ID"
+    CLIENT_ID = os.getenv(
+        "ANTIGRAVITY_OAUTH_CLIENT_ID",
+        "REPLACE_WITH_ANTIGRAVITY_OAUTH_CLIENT_ID",
     )
-    CLIENT_SECRET = "REPLACE_WITH_ANTIGRAVITY_OAUTH_CLIENT_SECRET"
+    CLIENT_SECRET = os.getenv(
+        "ANTIGRAVITY_OAUTH_CLIENT_SECRET",
+        "REPLACE_WITH_ANTIGRAVITY_OAUTH_CLIENT_SECRET",
+    )
     OAUTH_SCOPES = [
         "https://www.googleapis.com/auth/cloud-platform",
         "https://www.googleapis.com/auth/userinfo.email",
