@@ -83,6 +83,36 @@ python src/proxy_app/main.py
 
 > **Tip:** Running with command-line arguments (e.g., `--host 0.0.0.0 --port 8000`) bypasses the TUI and starts the proxy directly.
 
+### Optional: Install `proxy.zsh` Helper (macOS/Linux + zsh)
+
+This repo includes a sample `proxy.zsh` helper that adds a `proxy` command (`start`, `stop`, `models`, `update`, etc.).
+
+```bash
+# 1) Download helper script
+mkdir -p ~/.config/llm-api-key-proxy
+curl -fsSL \
+  https://raw.githubusercontent.com/Nghiauet/LLM-API-Key-Proxy/main/proxy.zsh \
+  -o ~/.config/llm-api-key-proxy/proxy.zsh
+chmod +x ~/.config/llm-api-key-proxy/proxy.zsh
+
+# 2) Configure required values
+echo 'export PROXY_BASE="$HOME/LLM-API-Key-Proxy"' >> ~/.zshrc
+echo 'export PROXY_API_KEY="REPLACE_WITH_PROXY_API_KEY"' >> ~/.zshrc
+
+# Optional: override update source (defaults shown)
+echo 'export PROXY_GIT_REPO="https://github.com/Nghiauet/LLM-API-Key-Proxy.git"' >> ~/.zshrc
+echo 'export PROXY_GIT_BRANCH="main"' >> ~/.zshrc
+
+# 3) Enable helper
+echo 'source ~/.config/llm-api-key-proxy/proxy.zsh' >> ~/.zshrc
+source ~/.zshrc
+
+# 4) Verify
+proxy help
+```
+
+> **Note:** If you use a fork, change the GitHub username in the `curl` URL and `PROXY_GIT_REPO`.
+
 ---
 
 ## Connecting to the Proxy
