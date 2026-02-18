@@ -10,6 +10,8 @@ A clean, well-structured provider for Google's Antigravity API, supporting:
 - Gemini 3 (Pro/Flash/Image) with thinkingLevel
 - Claude (Sonnet 4.5) via Antigravity proxy
 - Claude (Opus 4.5) via Antigravity proxy
+- Claude (Sonnet 4.6) via Antigravity proxy
+- Claude (Opus 4.6) via Antigravity proxy
 
 Key Features:
 - Unified streaming/non-streaming handling
@@ -27,6 +29,7 @@ import json
 import logging
 import os
 import random
+import re
 import time
 import uuid
 from datetime import datetime, timezone
@@ -147,7 +150,9 @@ AVAILABLE_MODELS = [
     # "gemini-2.5-computer-use-preview-10-2025",
     # Claude models
     "claude-sonnet-4.5",  # Uses -thinking variant when reasoning_effort provided
+    "claude-sonnet-4.6",
     "claude-opus-4.5",  # ALWAYS uses -thinking variant (non-thinking doesn't exist)
+    "claude-opus-4.6",  # ALWAYS uses -thinking variant (non-thinking doesn't exist)
     # Other models
     # "gpt-oss-120b-medium",  # GPT-OSS model, shares quota with Claude
 ]
@@ -210,6 +215,7 @@ MODEL_ALIAS_MAP = {
     # Claude: API/internal names → public user-facing names
     "claude-sonnet-4-5": "claude-sonnet-4.5",
     "claude-opus-4-5": "claude-opus-4.5",
+    "claude-opus-4-6": "claude-opus-4.6",
 }
 MODEL_ALIAS_REVERSE = {v: k for k, v in MODEL_ALIAS_MAP.items()}
 
@@ -1070,8 +1076,12 @@ class AntigravityProvider(
             "claude-sonnet-4-5-thinking",
             "claude-opus-4-5",
             "claude-opus-4-5-thinking",
+            "claude-opus-4-6",
+            "claude-opus-4-6-thinking",
             "claude-sonnet-4.5",
+            "claude-sonet-4.6"
             "claude-opus-4.5",
+            "claude-opus-4.6",
             "gpt-oss-120b-medium",
         ],
         # Gemini 3 Pro variants share quota
@@ -1530,13 +1540,42 @@ class AntigravityProvider(
 
     def _alias_to_internal(self, alias: str) -> str:
         """Convert public alias to internal model name."""
-        return MODEL_ALIAS_REVERSE.get(alias, alias)
+        resolved = MODEL_ALIAS_REVERSE.get(alias, alias)
+
+        # Support dotted Claude versions (e.g. claude-opus-4.6 -> claude-opus-4-6)
+        match = re.match(
+            r"^(claude-(?:sonnet|opus)-)(\d+)\.(\d+)(-thinking)?$",
+            resolved,
+        )
+        if match:
+            prefix, major, minor, thinking = match.groups()
+            return f"{prefix}{major}-{minor}{thinking or ''}"
+
+        # Accept shorthand aliases such as "opus-4.6" or "opus 4.6".
+        match = re.match(r"^opus[-\s](\d+)[.-](\d+)$", resolved.strip().lower())
+        if match:
+            major, minor = match.groups()
+            return f"claude-opus-{major}-{minor}"
+
+        return resolved
 
     def _internal_to_alias(self, internal: str) -> str:
         """Convert internal model name to public alias."""
         if internal in EXCLUDED_MODELS:
             return ""
-        return MODEL_ALIAS_MAP.get(internal, internal)
+        resolved = MODEL_ALIAS_MAP.get(internal, internal)
+
+        # Normalize Claude internal names to dotted user-facing aliases and
+        # hide internal -thinking suffix from the public model list.
+        match = re.match(
+            r"^(claude-(?:sonnet|opus)-)(\d+)-(\d+)(?:-thinking)?$",
+            resolved,
+        )
+        if match:
+            prefix, major, minor = match.groups()
+            return f"{prefix}{major}.{minor}"
+
+        return resolved
 
     def _is_gemini_3(self, model: str) -> bool:
         """Check if model is Gemini 3 (requires special handling)."""
@@ -3392,16 +3431,16 @@ Analyze what you did wrong, correct it, and retry the function call. Output ONLY
         """
         internal_model = self._alias_to_internal(model)
 
-        # Map Claude models to their -thinking variant
-        # claude-opus-4-5: ALWAYS use -thinking (non-thinking variant doesn't exist)
-        # claude-sonnet-4-5: only use -thinking when reasoning_effort is provided
+        # Map Claude models to their -thinking variant.
+        # Opus variants always use -thinking (non-thinking variant doesn't exist).
+        # Sonnet variants use -thinking when reasoning_effort is provided.
         if self._is_claude(internal_model) and not internal_model.endswith("-thinking"):
-            if internal_model == "claude-opus-4-5":
-                # Opus 4.5 ALWAYS requires -thinking variant
-                internal_model = "claude-opus-4-5-thinking"
-            elif internal_model == "claude-sonnet-4-5" and reasoning_effort:
-                # Sonnet 4.5 uses -thinking only when reasoning_effort is provided
-                internal_model = "claude-sonnet-4-5-thinking"
+            if re.match(r"^claude-opus-\d+-\d+$", internal_model):
+                # Opus variants require the -thinking API model.
+                internal_model = f"{internal_model}-thinking"
+            elif re.match(r"^claude-sonnet-\d+-\d+$", internal_model) and reasoning_effort:
+                # Sonnet variants use -thinking when reasoning_effort is provided.
+                internal_model = f"{internal_model}-thinking"
 
         # Map gemini-2.5-flash to -thinking variant when reasoning_effort is provided
         if internal_model == "gemini-2.5-flash" and reasoning_effort:
@@ -3922,11 +3961,13 @@ Analyze what you did wrong, correct it, and retry the function call. Output ONLY
             data = response.json()
 
             models = []
+            seen_models = set()
             for model_info in data.get("models", []):
                 internal = model_info.get("name", "").replace("models/", "")
                 if internal:
                     public = self._internal_to_alias(internal)
-                    if public:
+                    if public and public not in seen_models:
+                        seen_models.add(public)
                         models.append(f"antigravity/{public}")
 
             if models:
