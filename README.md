@@ -95,23 +95,30 @@ curl -fsSL \
   -o ~/.config/llm-api-key-proxy/proxy.zsh
 chmod +x ~/.config/llm-api-key-proxy/proxy.zsh
 
-# 2) Configure required values
+# 2) Point helper to your local repo
 echo 'export PROXY_BASE="$HOME/LLM-API-Key-Proxy"' >> ~/.zshrc
-echo 'export PROXY_API_KEY="REPLACE_WITH_PROXY_API_KEY"' >> ~/.zshrc
+
+# 3) Create proxy config file (used by proxy.zsh)
+cat > "$HOME/LLM-API-Key-Proxy/.env" <<'EOF'
+PROXY_API_KEY="REPLACE_WITH_PROXY_API_KEY"
+PROXY_HOST="127.0.0.1"
+PROXY_PORT="8000"
+PROXY_GIT_REPO="https://github.com/Nghiauet/LLM-API-Key-Proxy.git"
+PROXY_GIT_BRANCH="main"
+EOF
 
 # Optional: override update source (defaults shown)
-echo 'export PROXY_GIT_REPO="https://github.com/Nghiauet/LLM-API-Key-Proxy.git"' >> ~/.zshrc
-echo 'export PROXY_GIT_BRANCH="main"' >> ~/.zshrc
+# echo 'export PROXY_ENV_FILE="$HOME/LLM-API-Key-Proxy/.env"' >> ~/.zshrc
 
-# 3) Enable helper
+# 4) Enable helper
 echo 'source ~/.config/llm-api-key-proxy/proxy.zsh' >> ~/.zshrc
 source ~/.zshrc
 
-# 4) Verify
+# 5) Verify
 proxy help
 ```
 
-> **Note:** If you use a fork, change the GitHub username in the `curl` URL and `PROXY_GIT_REPO`.
+> **Note:** If you use a fork, change the GitHub username in the `curl` URL and in `.env` (`PROXY_GIT_REPO`).
 
 ---
 

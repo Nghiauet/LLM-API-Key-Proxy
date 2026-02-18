@@ -8,6 +8,38 @@ if [[ -z "${PROXY_BASE:-}" ]]; then
 elif [[ -f "$PROXY_BASE" ]]; then
   export PROXY_BASE="${PROXY_BASE:A:h}"
 fi
+export PROXY_ENV_FILE="${PROXY_ENV_FILE:-$PROXY_BASE/.env}"
+
+_proxy_load_env() {
+  local env_file line key value
+  env_file="${PROXY_ENV_FILE:-$PROXY_BASE/.env}"
+  export PROXY_ENV_FILE="$env_file"
+
+  [ -f "$env_file" ] || return 0
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    [[ -z "$line" ]] && continue
+    [[ "$line" == \#* ]] && continue
+    [[ "$line" != *=* ]] && continue
+
+    key="${line%%=*}"
+    value="${line#*=}"
+
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+
+    if [[ "$value" == \"*\" && "$value" == *\" && ${#value} -ge 2 ]]; then
+      value="${value:1:${#value}-2}"
+    elif [[ "$value" == \'*\' && ${#value} -ge 2 ]]; then
+      value="${value:1:${#value}-2}"
+    fi
+
+    export "$key=$value"
+  done < "$env_file"
+}
+
+# Load defaults from .env first, then fall back to hardcoded defaults.
+_proxy_load_env
 export PROXY_API_KEY="${PROXY_API_KEY:-REPLACE_WITH_PROXY_API_KEY}"
 export PROXY_HOST="${PROXY_HOST:-127.0.0.1}"
 export PROXY_PORT="${PROXY_PORT:-8000}"
@@ -51,6 +83,9 @@ _ensure_proxy() {
 # MAIN COMMAND
 # =============================================================================
 proxy() {
+  # Reload .env on each command so runtime edits are picked up immediately.
+  _proxy_load_env
+
   case "$1" in
     status)
       if pgrep -f "proxy_app/main.py" >/dev/null 2>&1; then
@@ -116,15 +151,18 @@ proxy() {
       # Ensure venv + deps
       _proxy_python >/dev/null || return 1
 
-      # Ensure .env key is present/updated
-      if [ -f ".env" ]; then
-        if grep -q "^PROXY_API_KEY=" .env; then
-          sed -i "s|^PROXY_API_KEY=.*|PROXY_API_KEY=\"$saved_key\"|" .env
+      # Ensure PROXY_API_KEY is present/updated in .env
+      local env_file="${PROXY_ENV_FILE:-$PROXY_BASE/.env}"
+      mkdir -p "$(dirname "$env_file")" || return 1
+      if [ -f "$env_file" ]; then
+        if grep -q "^PROXY_API_KEY=" "$env_file"; then
+          sed -i.bak "s|^PROXY_API_KEY=.*|PROXY_API_KEY=\"$saved_key\"|" "$env_file"
+          rm -f "${env_file}.bak"
         else
-          echo "PROXY_API_KEY=\"$saved_key\"" >> .env
+          echo "PROXY_API_KEY=\"$saved_key\"" >> "$env_file"
         fi
       else
-        echo "PROXY_API_KEY=\"$saved_key\"" > .env
+        echo "PROXY_API_KEY=\"$saved_key\"" > "$env_file"
       fi
 
       echo " Updated successfully"
@@ -190,6 +228,7 @@ PY
       cat <<EOF
 proxy {status|start|stop|restart|version|update|models|ping|login|tui|help}
   Base dir: $PROXY_BASE
+  Env file: $PROXY_ENV_FILE
   API base: http://$PROXY_HOST:$PROXY_PORT/v1
   Update from: $PROXY_GIT_REPO ($PROXY_GIT_BRANCH)
 EOF
